@@ -8,3 +8,9 @@ Includes a minimal executable to open the cimgui demo window using Zig 0.14.1 co
 ## Build and Run
 
 `make`
+
+### Requirements
+
+Using apt:
+
+`apt install build-essential make cmake libxkbcommon-dev libxinerama-dev libxcursor-dev libxi-dev`
