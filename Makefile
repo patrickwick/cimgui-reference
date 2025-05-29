@@ -15,6 +15,15 @@ build: src/glfw3.zig src/cimgui.zig
 ###############################################################################
 # cimgui bindings with embedded GLFW and OpenGL3 backend from source.
 src/cimgui.zig: ${DEPENDENCIES_DIR}/cimgui
+	@echo "Build libcimgui.a with GLFW3 and OpenGL3 backend features"
+	cmake \
+		-S ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3 \
+		-B ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3/build \
+		-DSTATIC_BUILD=ON \
+		-DCIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
+	cmake \
+		--build ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3/build \
+		--parallel
 	# Add cimgui.h into cimgui_impl.h, so both reside in a single binding file.
 	echo "#include \"cimgui.h\"" \
 		| cat - ${DEPENDENCIES_DIR}/cimgui/generator/output/cimgui_impl.h \
@@ -30,24 +39,23 @@ src/cimgui.zig: ${DEPENDENCIES_DIR}/cimgui
 		> src/cimgui.zig
 
 ${DEPENDENCIES_DIR}/cimgui:
-	@echo "Build libcimgui.a with GLFW3 and OpenGL3 backend features"
+	@echo "Clone cimgui"
 	git clone \
 		https://github.com/cimgui/cimgui.git \
 		--recursive \
 		--branch 1.91.8 \
 		--depth 1 \
 		${DEPENDENCIES_DIR}/cimgui
-	cmake \
-		-S ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3 \
-		-B ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3/build \
-		-DSTATIC_BUILD=ON \
-		-DCIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
-	cmake \
-		--build ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3/build \
-		--parallel
 
 # GLFW3 from source.
 src/glfw3.zig: ${DEPENDENCIES_DIR}/glfw3
+	@echo "Build GLFW3"
+	cmake \
+		-S ${DEPENDENCIES_DIR}/glfw3 \
+		-B ${DEPENDENCIES_DIR}/glfw3/build
+	cmake \
+		--build ${DEPENDENCIES_DIR}/glfw3/build \
+		--parallel
 	zig translate-c \
 		-lc \
 		-I${DEPENDENCIES_DIR}/glfw3/include \
@@ -55,7 +63,7 @@ src/glfw3.zig: ${DEPENDENCIES_DIR}/glfw3
 		> src/glfw3.zig
 
 ${DEPENDENCIES_DIR}/glfw3:
-	@echo "Build GLFW3"
+	@echo "Clone GLFW3"
 	git clone \
 		https://github.com/glfw/glfw.git \
 		--recursive \
