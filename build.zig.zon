@@ -1,0 +1,13 @@
+.{
+    .name = .imgui_reference,
+    .version = "0.1.0",
+    .fingerprint = 0x3cfdac3e568fbcfa, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "Makefile",
+        "src",
+    },
+}
