@@ -26,7 +26,7 @@ src/cimgui.zig: ${DEPENDENCIES_DIR}/cimgui
 		--parallel
 	# Add cimgui.h into cimgui_impl.h, so both reside in a single binding file.
 	echo "#include \"cimgui.h\"" \
-		| cat - ${DEPENDENCIES_DIR}/cimgui/generator/output/cimgui_impl.h \
+		| cat - ${DEPENDENCIES_DIR}/cimgui/cimgui_impl.h \
 		> ${DEPENDENCIES_DIR}/cimgui/cimgui_impl_combined.h
 	zig translate-c \
 		-DCIMGUI_DEFINE_ENUMS_AND_STRUCTS=1 \
@@ -38,12 +38,13 @@ src/cimgui.zig: ${DEPENDENCIES_DIR}/cimgui
 		${DEPENDENCIES_DIR}/cimgui/cimgui_impl_combined.h \
 		> src/cimgui.zig
 
+# Uses docking_inter branch to support window docking features.
 ${DEPENDENCIES_DIR}/cimgui:
 	@echo "Clone cimgui"
 	git clone \
 		https://github.com/cimgui/cimgui.git \
 		--recursive \
-		--branch 1.91.8 \
+		--branch docking_inter \
 		--depth 1 \
 		${DEPENDENCIES_DIR}/cimgui
 

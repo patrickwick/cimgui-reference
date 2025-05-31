@@ -59,7 +59,7 @@ pub fn main() !void {
     if (!cimgui.ImGui_ImplOpenGL3_Init(glsl_version)) @panic("ImGui_ImplOpenGL3_Init");
     defer cimgui.ImGui_ImplOpenGL3_Shutdown();
 
-    const io = cimgui.igGetIO();
+    const io = cimgui.igGetIO_Nil();
     var pixels: [*c]u8 = null;
     var width: c_int = 0;
     var height: c_int = 0;
@@ -70,6 +70,7 @@ pub fn main() !void {
 
     io.*.DisplaySize = window_size;
     io.*.DeltaTime = 1.0 / target_frames_per_second; // ms
+    io.*.ConfigFlags |= cimgui.ImGuiConfigFlags_DockingEnable; // NOTE: currently requires "docking_inter" branch.
 
     while (glfw3.glfwWindowShouldClose(window) != glfw3.GLFW_TRUE) {
         glfw3.glfwPollEvents();
@@ -77,10 +78,8 @@ pub fn main() !void {
         cimgui.ImGui_ImplGlfw_NewFrame();
         cimgui.igNewFrame();
 
-        // cimgui content
-        {
-            cimgui.igShowDemoWindow(null);
-        }
+        // cimgui content.
+        cimgui.igShowDemoWindow(null);
 
         // render and swap
         cimgui.igRender();
