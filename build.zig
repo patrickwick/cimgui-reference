@@ -21,13 +21,12 @@ pub fn build(b: *std.Build) void {
     exe.linkLibCpp();
 
     exe.linkSystemLibrary("gl");
-    exe.linkSystemLibrary("x11");
 
-    exe.addLibraryPath(.{ .cwd_relative = "build_cimgui" });
+    exe.addLibraryPath(.{ .cwd_relative = "dependencies/cimgui/backend_test/example_glfw_opengl3/build" });
     exe.linkSystemLibrary("cimgui");
 
     exe.addLibraryPath(.{ .cwd_relative = "dependencies/glfw3/build/src" });
-    exe.linkSystemLibrary("glfw3");
+    exe.linkSystemLibrary("glfw");
 
     b.installArtifact(exe);
 

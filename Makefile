@@ -14,7 +14,6 @@ build: src/glfw3.zig src/cimgui.zig
 clean:
 	rm -f src/glfw3.zig
 	rm -f src/cimgui.zig
-	rm -rf build_cimgui
 	rm -rf ./zig-out
 	rm -rf ./.zig-cache
 
@@ -22,24 +21,25 @@ clean:
 # Dependencies.
 ###############################################################################
 # cimgui bindings with embedded GLFW and OpenGL3 backend from source.
-src/cimgui.zig: src/glfw3.zig ${DEPENDENCIES_DIR}/cimgui
+src/cimgui.zig: ${DEPENDENCIES_DIR}/cimgui
 	@echo "Build libcimgui.a with GLFW3 and OpenGL3 backend features"
 	cmake \
-		-S . \
-		-B build_cimgui \
-		-D CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
+		-S ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3 \
+		-B ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3/build \
+		-DSTATIC_BUILD=ON \
+		-DCIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
 	cmake \
-		--build build_cimgui \
+		--build ${DEPENDENCIES_DIR}/cimgui/backend_test/example_glfw_opengl3/build \
 		--parallel
 	# Add cimgui.h into cimgui_impl.h, so both reside in a single binding file.
 	echo "#include \"cimgui.h\"" \
 		| cat - ${DEPENDENCIES_DIR}/cimgui/cimgui_impl.h \
 		> ${DEPENDENCIES_DIR}/cimgui/cimgui_impl_combined.h
 	zig translate-c \
-		-D CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1 \
-		-D CIMGUI_USE_GLFW=1 \
-		-D CIMGUI_USE_OPENGL3=1 \
-		-D IMGUI_IMPL_OPENGL_LOADER_GL3W=1 \
+		-DCIMGUI_DEFINE_ENUMS_AND_STRUCTS=1 \
+		-DCIMGUI_USE_GLFW=1 \
+		-DCIMGUI_USE_OPENGL3=1 \
+		-DIMGUI_IMPL_OPENGL_LOADER_GL3W=1 \
 		-lc \
 		-I${DEPENDENCIES_DIR}/cimgui \
 		${DEPENDENCIES_DIR}/cimgui/cimgui_impl_combined.h \
@@ -60,10 +60,7 @@ src/glfw3.zig: ${DEPENDENCIES_DIR}/glfw3
 	@echo "Build GLFW3"
 	cmake \
 		-S ${DEPENDENCIES_DIR}/glfw3 \
-		-B ${DEPENDENCIES_DIR}/glfw3/build \
-		-D GLFW_BUILD_WAYLAND=1 \
-		-D GLFW_BUILD_X11=0 \
-		-D BUILD_SHARED_LIBS=0
+		-B ${DEPENDENCIES_DIR}/glfw3/build
 	cmake \
 		--build ${DEPENDENCIES_DIR}/glfw3/build \
 		--parallel

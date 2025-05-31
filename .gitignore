@@ -4,5 +4,4 @@
 /zig-out
 /.zig-cache
 /dependencies
-/build_cimgui
 /imgui.ini
