@@ -10,6 +10,13 @@ run: src/glfw3.zig src/cimgui.zig
 build: src/glfw3.zig src/cimgui.zig
 	zig build
 
+.PHONY: clean
+clean:
+	rm -f src/glfw3.zig
+	rm -f src/cimgui.zig
+	rm -rf ./zig-out
+	rm -rf ./.zig-cache
+
 ###############################################################################
 # Dependencies.
 ###############################################################################

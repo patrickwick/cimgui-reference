@@ -1,5 +1,6 @@
 const std = @import("std");
 
+// NOTE: these bindings are created using `make src/glfw3.zig src/cimgui.zig`.
 const cimgui = @import("cimgui.zig"); // cimgui with builtin GLFW/GL3 backend.
 const glfw3 = @import("glfw3.zig");
 
