@@ -30,7 +30,7 @@ pub fn main() !void {
     if (glfw3.glfwInit() != glfw3.GLFW_TRUE) @panic("glfwInit");
     defer glfw3.glfwTerminate();
 
-    const window_size = cimgui.ImVec2{ .x = 1000, .y = 800 };
+    const window_size = cimgui.ImVec2{ .x = 1200, .y = 800 };
     const target_frames_per_second = 60.0;
 
     const window = window: {
@@ -69,7 +69,7 @@ pub fn main() !void {
     const bytes_per_pixel: c_int = 0;
     cimgui.ImFontAtlas_GetTexDataAsRGBA32(io.*.Fonts, &pixels, &width, &height, bytes_per_pixel);
 
-    cimgui.igStyleColorsDark(null);
+    cimgui.igStyleColorsClassic(null);
 
     io.*.DisplaySize = window_size;
     io.*.DeltaTime = 1.0 / target_frames_per_second; // ms
@@ -116,13 +116,11 @@ pub fn main() !void {
 var text_buffer = [_]u8{0} ** 4096;
 
 fn experimentInit() void {
+    // TODO(pwr): load JSON dump of measurements from DWARF.
+    // => don't implement protocol in this PoC.
+
     @memset(&text_buffer, 0);
-    const example_code =
-        \\int main() {
-        \\  return EXIT_SUCCESS;
-        \\}
-        \\
-    ;
+    const example_code = @embedFile("test.c");
     @memcpy(text_buffer[0..example_code.len], example_code);
 }
 
@@ -148,7 +146,7 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
         const text_color = cimgui.igGetColorU32_Vec4(.{ .x = 1.0, .y = 1.0, .z = 1.0, .w = 1 });
         const rounding = 0.0;
 
-        const line_count = 80;
+        const line_count = 60;
         for (0..line_count) |line| {
             const decorator_offset = 4;
             const offset = @as(f32, @floatFromInt(line)) * font_size + decorator_offset;
@@ -334,24 +332,33 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
         };
         const draw = Draw{ .draw_list = draw_list_flame, .base = flame_cursor_pos };
 
+        const width = flame_region_size.x / @as(f32, @floatFromInt(grid_x));
         const height = flame_region_size.y / @as(f32, @floatFromInt(grid_y));
 
-        const xi = 5;
-        const x = @as(f32, @floatFromInt(xi)) * flame_region_size.x / @as(f32, @floatFromInt(grid_x));
-        for (0..3) |yi| {
-            const yif = @as(f32, @floatFromInt(yi));
-            const y = yif * height;
-            draw.span(x + yif * 10, y, 100 - yif * 20, height, "recursive({d})", .{yi});
-        }
-        for (0..3) |yi| {
-            const yif = @as(f32, @floatFromInt(yi));
-            const y = yif * height;
-            draw.event(x + yif * 10 + 30, y, "counter: {d}", .{yi});
+        draw.span(0, 0, flame_region_size.x, height, "main()", .{});
+
+        for ([_]usize{ 5, 15 }, 0..) |xi, i| {
+            const x = @as(f32, @floatFromInt(xi)) * width;
+            for (0..3) |yi| {
+                const yif = @as(f32, @floatFromInt(yi));
+                const y = (yif + 1) * height;
+                draw.span(x + yif * 10, y, 100 - yif * 20, height, "recursive({d})", .{yi});
+            }
+
+            for (0..3) |yi| {
+                const yif = @as(f32, @floatFromInt(yi));
+                const y = (yif + 1) * height;
+                draw.event(x + yif * 10 + 30, y, "counter: {d}", .{yi});
+            }
+
+            {
+                const x_event = @as(f32, @floatFromInt(xi - 2)) * width;
+                draw.event(x_event, 0, "stack: {d}, heap: {d}, global: {d}", .{ 123 + i, 456 + i * 2, 789 + i * 3 });
+            }
         }
 
-        // TODO(pwr): add data poins and vertical line at event trigger.
-
-        // _ = cimgui.igButton("test123", .{ .x = cursor_pos.x, .y = cursor_pos.y });
+        // TODO(pwr): pause/resume button.
+        // _ = cimgui.igButton("pause", .{ .x = cursor_pos.x, .y = cursor_pos.y });
     }
 
     // Measurement configuration.
@@ -365,7 +372,80 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
         _ = cimgui.igBegin("measurement configuration", null, cimgui.ImGuiWindowFlags_None);
         defer cimgui.igEnd();
 
-        // TODO(pwr):
+        const margin_right = 4;
+
+        // TODO(pwr): mutable array to allow toggling events and associated measurments.
+        var event_active = true;
+        if (cimgui.igCheckbox("##event_active", &event_active)) {}
+        cimgui.igSameLine(0, margin_right);
+        if (cimgui.igTreeNodeEx_Str("main_event", cimgui.ImGuiTreeNodeFlags_DefaultOpen)) {
+            defer cimgui.igTreePop();
+
+            {
+                var is_active = true;
+                if (cimgui.igCheckbox("##stack_variable", &is_active)) {}
+                cimgui.igSameLine(0, margin_right);
+                if (cimgui.igTreeNodeEx_Str("stack", cimgui.ImGuiTreeNodeFlags_DefaultOpen)) {
+                    defer cimgui.igTreePop();
+                    cimgui.igText("uint8_t");
+                    cimgui.igText("unit: ms");
+                    cimgui.igText("min: 0");
+                    cimgui.igText("max: 1000");
+                    cimgui.igText("stack_base_pointer: -80");
+                }
+            }
+
+            {
+                var is_active = true;
+                if (cimgui.igCheckbox("##heap_variable", &is_active)) {}
+                cimgui.igSameLine(0, margin_right);
+                if (cimgui.igTreeNodeEx_Str("heap", cimgui.ImGuiTreeNodeFlags_DefaultOpen)) {
+                    defer cimgui.igTreePop();
+                    cimgui.igText("int64_t");
+                    cimgui.igText("stack_pointer_deref: -96");
+                }
+            }
+
+            {
+                var is_active = true;
+                if (cimgui.igCheckbox("##global_variable", &is_active)) {}
+                cimgui.igSameLine(0, margin_right);
+                if (cimgui.igTreeNodeEx_Str("global", cimgui.ImGuiTreeNodeFlags_DefaultOpen)) {
+                    defer cimgui.igTreePop();
+                    cimgui.igText("int32_t");
+                    cimgui.igText("load_address_offset: 0x1b3c");
+                }
+            }
+
+            {
+                var is_active = false;
+                if (cimgui.igCheckbox("##inactive", &is_active)) {}
+                cimgui.igSameLine(0, margin_right);
+                if (cimgui.igTreeNodeEx_Str("inactive", cimgui.ImGuiTreeNodeFlags_None)) {
+                    defer cimgui.igTreePop();
+                    cimgui.igText("uint8_t");
+                    cimgui.igText("stack_base_pointer: -64");
+                }
+            }
+        }
+
+        var recursive_active = true;
+        if (cimgui.igCheckbox("##recursive_active", &recursive_active)) {}
+        cimgui.igSameLine(0, margin_right);
+        if (cimgui.igTreeNodeEx_Str("recursive", cimgui.ImGuiTreeNodeFlags_DefaultOpen)) {
+            defer cimgui.igTreePop();
+
+            {
+                var is_active = true;
+                if (cimgui.igCheckbox("##counter", &is_active)) {}
+                cimgui.igSameLine(0, margin_right);
+                if (cimgui.igTreeNodeEx_Str("counter", cimgui.ImGuiTreeNodeFlags_DefaultOpen)) {
+                    defer cimgui.igTreePop();
+                    cimgui.igText("uint64_t");
+                    cimgui.igText("stack_base_pointer: -64");
+                }
+            }
+        }
     }
 
     // Calibration configuration.
