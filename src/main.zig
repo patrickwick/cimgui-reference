@@ -30,7 +30,7 @@ pub fn main() !void {
     if (glfw3.glfwInit() != glfw3.GLFW_TRUE) @panic("glfwInit");
     defer glfw3.glfwTerminate();
 
-    const window_size = cimgui.ImVec2{ .x = 1000, .y = 600 };
+    const window_size = cimgui.ImVec2{ .x = 1000, .y = 800 };
     const target_frames_per_second = 60.0;
 
     const window = window: {
@@ -41,7 +41,7 @@ pub fn main() !void {
 
         const monitor = null;
         const share = null;
-        const window = glfw3.glfwCreateWindow(window_size.x, window_size.y, "client", monitor, share) orelse @panic("glfwCreateWindow");
+        const window = glfw3.glfwCreateWindow(window_size.x, window_size.y, "", monitor, share) orelse @panic("glfwCreateWindow");
         errdefer glfw3.glfwDestroyWindow(window);
 
         glfw3.glfwMakeContextCurrent(window);
@@ -74,6 +74,8 @@ pub fn main() !void {
     io.*.DisplaySize = window_size;
     io.*.DeltaTime = 1.0 / target_frames_per_second; // ms
     io.*.ConfigFlags |= cimgui.ImGuiConfigFlags_DockingEnable; // NOTE: currently requires "docking_inter" branch.
+
+    experimentInit();
 
     var once = false;
     var last_ts = std.time.nanoTimestamp();
@@ -113,8 +115,23 @@ pub fn main() !void {
 
 var text_buffer = [_]u8{0} ** 4096;
 
+fn experimentInit() void {
+    @memset(&text_buffer, 0);
+    const example_code =
+        \\int main() {
+        \\  return EXIT_SUCCESS;
+        \\}
+        \\
+    ;
+    @memcpy(text_buffer[0..example_code.len], example_code);
+}
+
 fn experiment(elapsed_s: f32, dt_s: f32) void {
     _ = dt_s;
+
+    const font_size = cimgui.igGetFontSize();
+    const grid_x = 25;
+    const grid_y = 5;
 
     // Code view.
     {
@@ -126,8 +143,6 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
 
         var cursor_pos: cimgui.ImVec2 = undefined;
         cimgui.igGetCursorScreenPos(&cursor_pos);
-
-        const font_size = cimgui.igGetFontSize();
 
         const color = cimgui.igGetColorU32_Vec4(.{ .x = 0.3, .y = 0.3, .z = 0.3, .w = 1 });
         const text_color = cimgui.igGetColorU32_Vec4(.{ .x = 1.0, .y = 1.0, .z = 1.0, .w = 1 });
@@ -189,6 +204,8 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
         var cursor_pos: cimgui.ImVec2 = undefined;
         cimgui.igGetCursorScreenPos(&cursor_pos);
 
+        drawGrid(draw_list, grid_x, grid_y, region_size, cursor_pos, font_size);
+
         const speed = 0.2;
         const frequency = 3.0;
         var values = [_]f32{0.0} ** 15;
@@ -197,47 +214,144 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
             v.* = std.math.cos(2.0 * std.math.pi * t * frequency);
         }
 
-        const flame_height = 100;
-        const plot_region = cimgui.ImVec2{ .x = region_size.x, .y = region_size.y - flame_height };
-        const flame_region = cimgui.ImVec2{ .x = region_size.x, .y = flame_height };
-
         const line_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.8, .y = 0.8, .z = 0.8, .w = 1 });
         const scatter_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.6, .y = 0.6, .z = 0.6, .w = 1 });
         var last: cimgui.ImVec2 = .{ .x = 0, .y = 0 };
         for (&values, 0..) |*v, i| {
             const x_offset = cursor_pos.x;
             const y_offset = cursor_pos.y;
-            const x = @as(f32, @floatFromInt(i)) * plot_region.x / @as(f32, @floatFromInt(values.len));
+            const x = @as(f32, @floatFromInt(i)) * region_size.x / @as(f32, @floatFromInt(values.len));
 
-            const v1 = cimgui.ImVec2{ .x = x + x_offset, .y = ((v.* + 1.0) * 0.5) * plot_region.y + y_offset };
+            const v1 = cimgui.ImVec2{ .x = x + x_offset, .y = ((v.* + 1.0) * 0.5) * region_size.y + y_offset };
 
             cimgui.ImDrawList_AddLine(draw_list, v1, last, line_color, 1);
             cimgui.ImDrawList_AddCircleFilled(draw_list, v1, 4, scatter_color, 8);
             last = v1;
         }
+    }
 
-        // TODO(pwr): combine measurement values and flame graph in one shared time axis diagram.
-        // Classical values on top, flame graph showing dynamic aspects like recursion below and call stack below.
-        // Flame graph.
-        {
-            cimgui.igSetCursorPos(.{ .x = 0, .y = plot_region.y });
-            _ = cimgui.igBeginChild_Str("##", flame_region, cimgui.ImGuiChildFlags_None, cimgui.ImGuiWindowFlags_NoDecoration);
-            defer cimgui.igEndChild();
-            const draw_list_flame = cimgui.igGetWindowDrawList();
-            cimgui.igGetCursorScreenPos(&cursor_pos);
+    // TODO(pwr): combine measurement values and flame graph in one shared time axis diagram.
+    // Classical values on top, flame graph showing dynamic aspects like recursion below and call stack below.
+    // Flame graph.
+    {
+        // _ = cimgui.igBeginChild_Str(
+        //     "##",
+        //     .{ .x = flame_region.Max.x - flame_region.Min.x, .y = flame_region.Max.y - flame_region.Min.y },
+        //     cimgui.ImGuiChildFlags_None,
+        //     cimgui.ImGuiWindowFlags_NoDecoration,
+        // );
+        // defer cimgui.igEndChild();
+        _ = cimgui.igBegin("flame graph", null, cimgui.ImGuiWindowFlags_None);
+        defer cimgui.igEnd();
 
-            const background_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.9, .y = 0.9, .z = 0.9, .w = 1 });
-            cimgui.ImDrawList_AddRectFilled(
-                draw_list_flame,
-                .{ .x = cursor_pos.x, .y = cursor_pos.y },
-                .{ .x = cursor_pos.x + 100, .y = cursor_pos.y + 50 },
-                background_color,
-                0,
-                cimgui.ImDrawFlags_None,
-            );
+        const draw_list_flame = cimgui.igGetWindowDrawList();
 
-            // _ = cimgui.igButton("test123", .{ .x = cursor_pos.x, .y = cursor_pos.y });
+        var flame_region_size: cimgui.ImVec2 = undefined;
+        cimgui.igGetContentRegionAvail(&flame_region_size);
+
+        var flame_cursor_pos: cimgui.ImVec2 = undefined;
+        cimgui.igGetCursorScreenPos(&flame_cursor_pos);
+
+        drawGrid(draw_list_flame, grid_x, grid_y, flame_region_size, flame_cursor_pos, font_size);
+
+        const Draw = struct {
+            draw_list: *cimgui.ImDrawList,
+            base: cimgui.ImVec2,
+
+            fn span(self: @This(), x: f32, y: f32, width: f32, height: f32, comptime format: []const u8, format_args: anytype) void {
+                const color = cimgui.igGetColorU32_Vec4(.{ .x = 0.3, .y = 0.3, .z = 0.3, .w = 1 });
+                const border_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.9, .y = 0.9, .z = 0.9, .w = 1 });
+                const border_size = 1;
+                const text_color = border_color;
+
+                cimgui.ImDrawList_AddRectFilled(
+                    self.draw_list,
+                    .{ .x = self.base.x + x, .y = self.base.y + y },
+                    .{ .x = self.base.x + x + width, .y = self.base.y + y + height },
+                    border_color,
+                    0,
+                    cimgui.ImDrawFlags_None,
+                );
+
+                cimgui.ImDrawList_AddRectFilled(
+                    self.draw_list,
+                    .{ .x = self.base.x + x + border_size, .y = self.base.y + y + border_size },
+                    .{ .x = self.base.x + x + width - border_size, .y = self.base.y + y + height - border_size },
+                    color,
+                    0,
+                    cimgui.ImDrawFlags_None,
+                );
+
+                var label: [80]u8 = undefined;
+                const bytes_written = std.fmt.bufPrint(&label, format, format_args) catch @panic("format failed");
+                const text_begin = &label[0];
+                const text_end = &label[bytes_written.len];
+                cimgui.ImDrawList_AddText_Vec2(
+                    self.draw_list,
+                    .{ .x = self.base.x + x + border_size, .y = self.base.y + y + height * 0.5 },
+                    text_color,
+                    text_begin,
+                    text_end,
+                );
+            }
+
+            fn event(self: @This(), x: f32, y: f32, comptime format: []const u8, format_args: anytype) void {
+                const color = cimgui.igGetColorU32_Vec4(.{ .x = 0.3, .y = 0.3, .z = 0.3, .w = 1 });
+                const border_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.9, .y = 0.9, .z = 0.9, .w = 1 });
+                const line_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.9, .y = 0.9, .z = 0.9, .w = 1 });
+                const border_size = 1;
+                const text_color = border_color;
+
+                _ = color;
+                _ = line_color;
+
+                // const v1 = cimgui.ImVec2{ .x = self.base.x + x, .y = self.base.y };
+                // const v2 = cimgui.ImVec2{ .x = self.base.x + x, .y = self.base.y + 300 };
+                // cimgui.ImDrawList_AddLine(self.draw_list, v1, v2, line_color, 1);
+
+                const radius = 4;
+                const segments = 8;
+                cimgui.ImDrawList_AddCircleFilled(
+                    self.draw_list,
+                    .{ .x = self.base.x + x, .y = self.base.y + y },
+                    radius,
+                    border_color,
+                    segments,
+                );
+
+                var label: [80]u8 = undefined;
+                const bytes_written = std.fmt.bufPrint(&label, format, format_args) catch @panic("format failed");
+                const text_begin = &label[0];
+                const text_end = &label[bytes_written.len];
+                cimgui.ImDrawList_AddText_Vec2(
+                    self.draw_list,
+                    .{ .x = self.base.x + x + border_size, .y = self.base.y + y + border_size },
+                    text_color,
+                    text_begin,
+                    text_end,
+                );
+            }
+        };
+        const draw = Draw{ .draw_list = draw_list_flame, .base = flame_cursor_pos };
+
+        const height = flame_region_size.y / @as(f32, @floatFromInt(grid_y));
+
+        const xi = 5;
+        const x = @as(f32, @floatFromInt(xi)) * flame_region_size.x / @as(f32, @floatFromInt(grid_x));
+        for (0..3) |yi| {
+            const yif = @as(f32, @floatFromInt(yi));
+            const y = yif * height;
+            draw.span(x + yif * 10, y, 100 - yif * 20, height, "recursive({d})", .{yi});
         }
+        for (0..3) |yi| {
+            const yif = @as(f32, @floatFromInt(yi));
+            const y = yif * height;
+            draw.event(x + yif * 10 + 30, y, "counter: {d}", .{yi});
+        }
+
+        // TODO(pwr): add data poins and vertical line at event trigger.
+
+        // _ = cimgui.igButton("test123", .{ .x = cursor_pos.x, .y = cursor_pos.y });
     }
 
     // Measurement configuration.
@@ -265,6 +379,45 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
         _ = cimgui.igBegin("calibration", null, cimgui.ImGuiWindowFlags_None);
         defer cimgui.igEnd();
 
+        _ = cimgui.igLabelText("##", "TODO");
         // TODO(pwr):
+    }
+}
+
+fn drawGrid(draw_list: *cimgui.ImDrawList, grid_x: usize, grid_y: usize, region_size: cimgui.ImVec2, cursor_pos: cimgui.ImVec2, font_size: f32) void {
+    const grid_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.2, .y = 0.2, .z = 0.2, .w = 1 });
+
+    for (0..grid_x + 1) |i| {
+        const x = @as(f32, @floatFromInt(i)) * region_size.x / @as(f32, @floatFromInt(grid_x));
+        cimgui.ImDrawList_AddLine(
+            draw_list,
+            .{ .x = cursor_pos.x + x, .y = cursor_pos.y },
+            .{ .x = cursor_pos.x + x, .y = cursor_pos.y + region_size.y },
+            grid_color,
+            1,
+        );
+
+        var line_label_buffer: [20]u8 = undefined;
+        const bytes_written = std.fmt.formatIntBuf(&line_label_buffer, i, 10, .lower, .{});
+        const text_begin = &line_label_buffer[0];
+        const text_end = &line_label_buffer[bytes_written];
+        cimgui.ImDrawList_AddText_Vec2(
+            draw_list,
+            .{ .x = cursor_pos.x + x, .y = cursor_pos.y + region_size.y - font_size },
+            grid_color,
+            text_begin,
+            text_end,
+        );
+    }
+
+    for (0..grid_y + 1) |i| {
+        const y = @as(f32, @floatFromInt(i)) * region_size.y / @as(f32, @floatFromInt(grid_y));
+        cimgui.ImDrawList_AddLine(
+            draw_list,
+            .{ .x = cursor_pos.x, .y = cursor_pos.y + y },
+            .{ .x = cursor_pos.x + region_size.x, .y = cursor_pos.y + y },
+            grid_color,
+            1,
+        );
     }
 }
