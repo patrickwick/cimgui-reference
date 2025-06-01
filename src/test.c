@@ -30,6 +30,9 @@ int main(void) {
   *heap = 456;
 
   for (int i = 0; i < 2; ++i) {
+    /// @mc_unit ms
+    /// @mc_min 0
+    /// @mc_max 1000
     uint8_t stack = 123 + i;
     *heap += 2;
     global += 3;
