@@ -130,6 +130,7 @@ fn experimentInit() void {
 }
 
 fn experiment(elapsed_s: f32, dt_s: f32) void {
+    _ = elapsed_s;
     _ = dt_s;
 
     const font_size = cimgui.igGetFontSize();
@@ -212,54 +213,57 @@ fn experiment(elapsed_s: f32, dt_s: f32) void {
         const width = region_size.x / @as(f32, @floatFromInt(grid_x));
         const height = region_size.y / @as(f32, @floatFromInt(grid_y));
 
-        const values = [_]cimgui.ImVec2{
-            .{ .x = 0 * width, .y = region_size.y - 0 * height },
-            .{ .x = 6 * width, .y = region_size.y - 0 * height },
-            .{ .x = 6.5 * width, .y = region_size.y - 1 * height },
-            .{ .x = 7 * width, .y = region_size.y - 2 * height },
-            .{ .x = 16 * width, .y = region_size.y - 0 * height },
-            .{ .x = 16.5 * width, .y = region_size.y - 1 * height },
-            .{ .x = 17 * width, .y = region_size.y - 2 * height },
-            .{ .x = 25 * width, .y = region_size.y - 0 * height },
-        };
-
-        var last = values[0];
-        for (&values) |*value| {
-            const v1 = cimgui.ImVec2{ .x = value.x + cursor_pos.x, .y = value.y + cursor_pos.y };
-            defer last = v1;
-
+        {
             const line_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.8, .y = 0.8, .z = 0.8, .w = 1 });
-            const scatter_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.5, .y = 0.5, .z = 1.0, .w = 1 });
-            cimgui.ImDrawList_AddLine(draw_list, v1, last, line_color, 1);
+            const scatter_color = recursive_color;
 
-            const radius = 6;
-            const segments = 4;
-            cimgui.ImDrawList_AddNgonFilled(draw_list, v1, radius, scatter_color, segments);
+            const values = [_]cimgui.ImVec2{
+                .{ .x = 0 * width, .y = region_size.y - 0 * height },
+                .{ .x = 6 * width, .y = region_size.y - 0 * height },
+                .{ .x = 6.5 * width, .y = region_size.y - 1 * height },
+                .{ .x = 7 * width, .y = region_size.y - 2 * height },
+                .{ .x = 16 * width, .y = region_size.y - 0 * height },
+                .{ .x = 16.5 * width, .y = region_size.y - 1 * height },
+                .{ .x = 17 * width, .y = region_size.y - 2 * height },
+                .{ .x = 25 * width, .y = region_size.y - 0 * height },
+            };
+
+            var last = values[0];
+            for (&values) |*value| {
+                const v1 = cimgui.ImVec2{ .x = value.x + cursor_pos.x, .y = value.y + cursor_pos.y };
+                defer last = v1;
+
+                cimgui.ImDrawList_AddLine(draw_list, v1, last, line_color, 1);
+
+                const radius = 6;
+                const segments = 4;
+                cimgui.ImDrawList_AddNgonFilled(draw_list, v1, radius, scatter_color, segments);
+            }
         }
 
-        _ = elapsed_s;
-        // const speed = 0.2;
-        // const frequency = 3.0;
-        // var values = [_]f32{0.0} ** 15;
-        // for (&values, 0..) |*v, i| {
-        //     const t: f32 = elapsed_s * speed + @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(values.len + 1));
-        //     v.* = std.math.cos(2.0 * std.math.pi * t * frequency);
-        // }
+        {
+            const line_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.8, .y = 0.8, .z = 0.8, .w = 1 });
+            const scatter_color = main_event_color;
 
-        // const line_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.8, .y = 0.8, .z = 0.8, .w = 1 });
-        // const scatter_color = cimgui.igGetColorU32_Vec4(.{ .x = 0.6, .y = 0.6, .z = 0.6, .w = 1 });
-        // var last: cimgui.ImVec2 = .{ .x = 0, .y = 0 };
-        // for (&values, 0..) |*v, i| {
-        //     const x_offset = cursor_pos.x;
-        //     const y_offset = cursor_pos.y;
-        //     const x = @as(f32, @floatFromInt(i)) * region_size.x / @as(f32, @floatFromInt(values.len));
+            const values = [_]cimgui.ImVec2{
+                .{ .x = 0 * width, .y = region_size.y - 2 * height },
+                .{ .x = 3 * width, .y = region_size.y - 2 * height },
+                .{ .x = 13 * width, .y = region_size.y - 3 * height },
+                .{ .x = 25 * width, .y = region_size.y - 3 * height },
+            };
 
-        //     const v1 = cimgui.ImVec2{ .x = x + x_offset, .y = ((v.* + 1.0) * 0.5) * region_size.y + y_offset };
+            var last = values[0];
+            for (&values) |*value| {
+                const v1 = cimgui.ImVec2{ .x = value.x + cursor_pos.x, .y = value.y + cursor_pos.y };
+                defer last = v1;
 
-        //     cimgui.ImDrawList_AddLine(draw_list, v1, last, line_color, 1);
-        //     cimgui.ImDrawList_AddCircleFilled(draw_list, v1, 4, scatter_color, 8);
-        //     last = v1;
-        // }
+                cimgui.ImDrawList_AddLine(draw_list, v1, last, line_color, 1);
+
+                const radius = 6;
+                const segments = 4;
+                cimgui.ImDrawList_AddNgonFilled(draw_list, v1, radius, scatter_color, segments);
+            }
+        }
     }
 
     // TODO(pwr): combine measurement values and flame graph in one shared time axis diagram.

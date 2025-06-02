@@ -19,7 +19,7 @@ void recursive(uint64_t counter) {
 }
 
 extern int32_t global;
-int32_t global = 789;
+int32_t global = 3;
 
 int main(void) {
   mc_span_enter("main");
@@ -27,20 +27,21 @@ int main(void) {
   uint8_t inactive = 0xcc;
 
   int64_t *heap = malloc(sizeof(int64_t));
-  *heap = 456;
+  *heap = 2;
 
   for (int i = 0; i < 2; ++i) {
     /// @mc_unit ms
     /// @mc_min 0
     /// @mc_max 1000
-    uint8_t stack = 123 + i;
-    *heap += 2;
-    global += 3;
+    uint8_t stack = 1 + i;
     printf("stack: %d, heap: %li, global: %d\n", stack, *heap, global);
     mc_event_trigger("main_event");
 
     recursive(0);
     sleep(1);
+
+    *heap += 1;
+    global += 1;
   }
 
   mc_span_exit("main");
